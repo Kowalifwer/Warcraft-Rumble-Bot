@@ -45,7 +45,7 @@ if __name__ == "__alt__":
     screenshot = take_screenshot()
 
     # Specify the path to the template image
-    template_path = "icons/quest.png"
+    template_path = "clickables/quest.png"
 
     # Example: Find the template image on the screen
     result = find_template(template_path, screenshot)
@@ -61,7 +61,7 @@ if __name__ == "__alt__":
         print("Template not found.")
 
 def click_image(image_name):
-    location = pyautogui.locateOnScreen(f"icons/{image_name}.png", confidence=0.75, grayscale=True)
+    location = pyautogui.locateOnScreen(f"clickables/{image_name}.png", confidence=0.75, grayscale=True)
     #move mouse to location
     pyautogui.moveTo(location[0], location[1])
     #click
