@@ -76,7 +76,13 @@ def start_game():
     print("Game loaded!")
     return True #if we get here, we are in menu
 
-def sleep(timeout=10, condition=lambda x: False, *args, **kwargs):
+def sleep(timeout=2, condition=lambda x: False, *args, **kwargs):
+    # If no condition is provided, just sleep for the timeout.
+    if "condition" not in kwargs:
+        pyautogui.sleep(timeout)
+        return
+    
+    # Otherwise, sleep until the condition is met or the timeout is reached.
     attempt_interval = 0.5
     max_attempts = timeout / attempt_interval
     current_attempt = 0
