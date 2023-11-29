@@ -46,6 +46,71 @@ def press_key(key):
     #press key
     pyautogui.press(key)
 
+def start_game():
+    def verify_loading():
+        return get_image_location("logo")
+
+    def verify_in_menu():
+        return get_image_location("store")
+
+    click_image("bluestacks_rumble")
+    # wait 2s
+    pyautogui.sleep(3)
+    loading = True if verify_loading() else False
+
+    loaded = False
+    attempts = 0
+    while not loaded:
+        if attempts > 10:
+            #restart game
+            restart_game()
+            return False
+
+        loaded = True if verify_in_menu() else False
+        if not loaded:
+            #wait 3s
+            print(f"Waiting for game to load... {attempts}")
+            pyautogui.sleep(3)
+            attempts += 1
+
+    print("Game loaded!")
+    return True #if we get here, we are in menu
+
+def sleep(timeout=10, condition=lambda x: False, *args, **kwargs):
+    attempt_interval = 0.5
+    max_attempts = timeout / attempt_interval
+    current_attempt = 0
+
+    while current_attempt < max_attempts:
+        print(f"Sleeping... {current_attempt * attempt_interval}s/{timeout}s")
+        if condition(*args, **kwargs): #if condition met, exit sleep loop
+            print(f"Condition {condition} met, exiting sleep")
+            return
+        
+        pyautogui.sleep(attempt_interval)
+        current_attempt += 1
+    
+
+def restart_game():
+    click_image("bluestacks_home")
+
+    sleep(5, get_image_location, "bluestacks_home_search")
+    print("On home screen, restarting game...")
+
+    click_image("bluestacks_recent_apps")
+    
+    sleep(5, get_image_location, "bluestacks_clear_all")
+    print("On recent apps screen")
+
+    click_image("bluestacks_clear_all")
+    
+    sleep(5, get_image_location, "bluestacks_home_search")
+    print("Cleared all apps")
+
+    #start game
+    start_game()
+    print("Game restarted!")
+
 if __name__ == "__main__":
     function_name = sys.argv[1] if len(sys.argv) > 1 else None
 
@@ -106,6 +171,11 @@ if __name__ == "__xd__":
 #. 1. bluestacks_rumble -> wait at least 10 s and verify we in main menu.
 #. 2. bluestacks_pvp
 
+def bluestacks_rumble():
+    click_image("bluestacks_rumble")
+
+def bluestacks_pvp():
+    click_image("bluestacks_pvp")
 
 # PvP Farm
 # 0. Click on the Battle button
