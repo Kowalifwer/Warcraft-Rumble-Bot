@@ -12,12 +12,19 @@ def get_image_location(image_name, centered=True) -> tuple or None:
     location = None
     image_path = f"clickables/{image_name}"
 
+    # Make copy of global state locate params, so we can modify it under certain conditions
+    screen_params = SCREEN_LOCATE_PARAMS.copy()
+
+    # If we are dealing with bluestacks icons, we need to set the region to None, since the icons are not in the game screen.
+    if "bluestacks" in image_name:
+        screen_params["region"] = None
+
     # Check if image or fallback exists in filesystem
     if not (os.path.exists(f"{image_path}.png") or os.path.exists(f"{image_path}_selected.png")):
         raise FileNotFoundError(f"Could not find image {image_name}")
 
     try:
-        location = pyautogui.locateOnScreen(f"{image_path}.png", **SCREEN_LOCATE_PARAMS)
+        location = pyautogui.locateOnScreen(f"{image_path}.png", **screen_params)
     except pyautogui.ImageNotFoundException:
         image_path = f"{image_path}_selected.png"
         # Check if fallback path exists in filesystem
@@ -26,7 +33,7 @@ def get_image_location(image_name, centered=True) -> tuple or None:
 
         # If it does, try to find it
         try:
-            location = pyautogui.locateOnScreen(image_path, **SCREEN_LOCATE_PARAMS)
+            location = pyautogui.locateOnScreen(image_path, **screen_params)
         except pyautogui.ImageNotFoundException:
             location = None
 
@@ -68,24 +75,18 @@ def start_game():
         return get_image_location("store")
 
     click_image("bluestacks_rumble")
-    # wait 2s
-    pyautogui.sleep(3)
+    
+    #wait for game to load
     loading = True if verify_loading() else False
 
-    loaded = False
-    attempts = 0
-    while not loaded:
-        if attempts > 10:
-            #restart game
-            restart_game()
+    attempts = 1
+    while not sleep(10, condition=verify_in_menu):
+        if attempts > 5:
+            print(f"Game failed to load after {attempts} attempts. RIP!")
             return False
 
-        loaded = True if verify_in_menu() else False
-        if not loaded:
-            #wait 3s
-            print(f"Waiting for game to load... {attempts}")
-            pyautogui.sleep(5)
-            attempts += 1
+        print(f"Game failed to load on attempt {attempts}/6. Trying again.")
+        attempts += 1
 
     print("Game loaded!")
     return True #if we get here, we are in menu
@@ -103,12 +104,15 @@ def sleep(timeout: int=2, condition: callable=always_false, *args, **kwargs):
         condition (callable): A function that returns False if it fails, whilst any other output will result in a pass.
         *args: Positional arguments to pass to the condition function.
         **kwargs: Keyword arguments to pass to the condition function.
+
+    Returns:
+        bool: True if the condition was met, False if the timeout was reached.
     """
 
     # If no condition parameter is provided (default), just sleep for the timeout.
     if condition is always_false:
         pyautogui.sleep(timeout)
-        return
+        return True
     
     # Otherwise, sleep until the condition is met or the timeout is reached.
     attempt_interval = 0.25
@@ -118,10 +122,12 @@ def sleep(timeout: int=2, condition: callable=always_false, *args, **kwargs):
     while current_attempt < max_attempts:
         print(f"Sleeping... {current_attempt * attempt_interval}s/{timeout}s")
         if condition(*args, **kwargs): #if condition met, exit sleep loop
-            return
+            return True
         
         pyautogui.sleep(attempt_interval)
         current_attempt += 1
+    
+    return False # if we get here, we timed out
 
 def start_pvp():
     while True:
@@ -162,8 +168,10 @@ def restart_game():
     print("Cleared all apps")
 
     #start game
-    start_game()
-    print("Game restarted!")
+    game_started = start_game()
+    if not game_started:
+        print("Failed to start game. Restarting...")
+        restart_game()
 
 def detect_multiple_images(infinite=False):
     template_images = [
@@ -207,7 +215,6 @@ def establish_game_screen_bounds():
     # note currently relies on garrosh icon being in top left. TODO: make this more robust.
     print("Establishing game screen bounds...")
 
-    print(SCREEN_LOCATE_PARAMS["region"])
     top_left_icon_location = get_image_location("top_left_icon", centered=False)
     bottom_right_icon_location = get_image_location("bottom_right_icon", centered=False)
 
