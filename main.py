@@ -70,32 +70,66 @@ def start_game():
         if not loaded:
             #wait 3s
             print(f"Waiting for game to load... {attempts}")
-            pyautogui.sleep(3)
+            pyautogui.sleep(5)
             attempts += 1
 
     print("Game loaded!")
     return True #if we get here, we are in menu
 
-def sleep(timeout=2, condition=lambda x: False, *args, **kwargs):
-    # If no condition is provided, just sleep for the timeout.
-    if "condition" not in kwargs:
+def always_false(*args, **kwargs):
+    return False
+
+def sleep(timeout: int=2, condition: callable=always_false, *args, **kwargs):
+    """
+    Sleeps for the specified timeout, or until a condition is met.
+    Note that a condition and its arguments must be passed, since state can change and needs to be re-evaluated.
+
+    Args:
+        timeout (int): The timeout in seconds.
+        condition (callable): A function that returns False if it fails, whilst any other output will result in a pass.
+        *args: Positional arguments to pass to the condition function.
+        **kwargs: Keyword arguments to pass to the condition function.
+    """
+
+    # If no condition parameter is provided (default), just sleep for the timeout.
+    if condition is always_false:
         pyautogui.sleep(timeout)
         return
     
     # Otherwise, sleep until the condition is met or the timeout is reached.
-    attempt_interval = 0.5
+    attempt_interval = 0.25
     max_attempts = timeout / attempt_interval
     current_attempt = 0
 
     while current_attempt < max_attempts:
         print(f"Sleeping... {current_attempt * attempt_interval}s/{timeout}s")
         if condition(*args, **kwargs): #if condition met, exit sleep loop
-            print(f"Condition {condition} met, exiting sleep")
             return
         
         pyautogui.sleep(attempt_interval)
         current_attempt += 1
-    
+
+def start_pvp():
+    while True:
+        click_image("battle")
+
+        sleep(5, get_image_location, "pvp")
+
+        click_image("pvp")
+
+        sleep(5, get_image_location, "pvp_start")
+
+        click_image("pvp_start")
+
+        sleep(1.5, get_image_location, "pvp_cancel")
+
+        click_image("pvp_cancel")
+
+        sleep(5, get_image_location, "back")
+
+        click_image("back")
+
+        sleep(5, get_image_location, "battle")
 
 def restart_game():
     click_image("bluestacks_home")
