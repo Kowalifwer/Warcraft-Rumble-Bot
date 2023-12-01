@@ -2,11 +2,21 @@ import pyautogui
 import os
 import sys
 
+SCREEN_LOCATE_PARAMS = {
+    "confidence": 0.75,
+    "grayscale": True,
+}
+
 def get_image_location(image_name) -> tuple or None:
     location = None
     image_path = f"clickables/{image_name}"
+
+    # Check if image or fallback exists in filesystem
+    if not (os.path.exists(f"{image_path}.png") or os.path.exists(f"{image_path}_selected.png")):
+        raise FileNotFoundError(f"Could not find image {image_name}")
+
     try:
-        location = pyautogui.locateOnScreen(f"{image_path}.png", confidence=0.75, grayscale=True)
+        location = pyautogui.locateCenterOnScreen(f"{image_path}.png", **SCREEN_LOCATE_PARAMS)
     except pyautogui.ImageNotFoundException:
         image_path = f"{image_path}_selected.png"
         # Check if fallback path exists in filesystem
@@ -15,7 +25,7 @@ def get_image_location(image_name) -> tuple or None:
 
         # If it does, try to find it
         try:
-            location = pyautogui.locateOnScreen(image_path, confidence=0.75, grayscale=True)
+            location = pyautogui.locateCenterOnScreen(image_path, **SCREEN_LOCATE_PARAMS)
         except pyautogui.ImageNotFoundException:
             location = None
 
@@ -151,6 +161,37 @@ def restart_game():
     start_game()
     print("Game restarted!")
 
+def detect_multiple_images(infinite=False):
+    template_images = [
+        "combat/1_gold_unit",
+        "combat/2_gold_unit",
+        "combat/3_gold_unit",
+        "combat/4_gold_unit",
+        "combat/5_gold_unit",
+        "combat/6_gold_unit",
+    ]
+    _infinite = True
+
+    while _infinite:
+        if not infinite:
+            _infinite = False
+
+        count = 0
+        for template_image in template_images:
+            location = get_image_location(template_image)
+            if location:
+                print(f"Found {template_image} at {location}")
+                count += 1
+            else:
+                print(f"Could not find {template_image}")
+        
+        if count == len(template_images):
+            print("Found all images!")
+        else:
+            print(f"Found {count}/{len(template_images)} images")
+        
+        pyautogui.sleep(1)
+
 if __name__ == "__main__":
     function_name = sys.argv[1] if len(sys.argv) > 1 else None
 
@@ -193,7 +234,10 @@ if __name__ == "__xd__":
 
     for action in actions:
         action = BotAction(action)
+            
 
+# Notes:
+# 1.All x_gold_unit images get detected. Only from the active battle screen, as intended.  
 
 # action setup:
 # 1. start action
