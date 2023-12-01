@@ -5,9 +5,10 @@ import sys
 SCREEN_LOCATE_PARAMS = {
     "confidence": 0.75,
     "grayscale": True,
+    "region": None,
 }
 
-def get_image_location(image_name) -> tuple or None:
+def get_image_location(image_name, centered=True) -> tuple or None:
     location = None
     image_path = f"clickables/{image_name}"
 
@@ -16,7 +17,7 @@ def get_image_location(image_name) -> tuple or None:
         raise FileNotFoundError(f"Could not find image {image_name}")
 
     try:
-        location = pyautogui.locateCenterOnScreen(f"{image_path}.png", **SCREEN_LOCATE_PARAMS)
+        location = pyautogui.locateOnScreen(f"{image_path}.png", **SCREEN_LOCATE_PARAMS)
     except pyautogui.ImageNotFoundException:
         image_path = f"{image_path}_selected.png"
         # Check if fallback path exists in filesystem
@@ -25,21 +26,24 @@ def get_image_location(image_name) -> tuple or None:
 
         # If it does, try to find it
         try:
-            location = pyautogui.locateCenterOnScreen(image_path, **SCREEN_LOCATE_PARAMS)
+            location = pyautogui.locateOnScreen(image_path, **SCREEN_LOCATE_PARAMS)
         except pyautogui.ImageNotFoundException:
             location = None
 
+    if location and centered:
+        location = pyautogui.center(location)
+
     return location
 
-def click_image(image_name):
-    location = get_image_location(image_name)
+def click_image(image_name, centered=True):
+    location = get_image_location(image_name, centered=centered)
 
     if location is None:
         print(f"Could not find image {image_name}")
         return
 
     #move mouse to location
-    pyautogui.moveTo(location[0], location[1])
+    pyautogui.moveTo(location[0], location[1], duration=0.5, tween=pyautogui.easeInOutQuad)
     #click
     pyautogui.click(location[0], location[1])
 
@@ -192,7 +196,39 @@ def detect_multiple_images(infinite=False):
         
         pyautogui.sleep(1)
 
+def select_unit_by_cost(cost: int):
+    cost = int(cost)
+    if cost < 1 or cost > 6:
+        raise ValueError(f"Invalid cost {cost}. Must be between 1 and 6.")
+
+    click_image(f"combat/{cost}_gold_unit")
+
+def establish_game_screen_bounds():
+    # note currently relies on garrosh icon being in top left. TODO: make this more robust.
+    print("Establishing game screen bounds...")
+
+    print(SCREEN_LOCATE_PARAMS["region"])
+    top_left_icon_location = get_image_location("top_left_icon", centered=False)
+    bottom_right_icon_location = get_image_location("bottom_right_icon", centered=False)
+
+    # check we have both locations
+    if not top_left_icon_location or not bottom_right_icon_location:
+        print("Failed to create screen bounds. Could not find top left or bottom right icon.")
+        return False
+
+    # bottom right location is foudn at topleft, we need to add the width and height of the icon to get the bottom right
+    bottom_right_icon_location = (bottom_right_icon_location[0] + bottom_right_icon_location.width, bottom_right_icon_location[1] + bottom_right_icon_location.height)
+
+    # create a bounding box
+    bounding_box = (top_left_icon_location[0], top_left_icon_location[1], bottom_right_icon_location[0] - top_left_icon_location[0], bottom_right_icon_location[1] - top_left_icon_location[1])
+
+    SCREEN_LOCATE_PARAMS["region"] = bounding_box
+
+    return True
+
 if __name__ == "__main__":
+    establish_game_screen_bounds()
+
     function_name = sys.argv[1] if len(sys.argv) > 1 else None
 
     # Assume the first command-line argument is the function to call
@@ -237,7 +273,10 @@ if __name__ == "__xd__":
             
 
 # Notes:
-# 1.All x_gold_unit images get detected. Only from the active battle screen, as intended.  
+# 1.All x_gold_unit images get detected. Only from the active battle screen, as intended.
+
+# Optimization ideas:
+# 1. find a way to periodically detect the bounds of the game screen (its narrower than the actual screen), and only search within those bounds for gameplay.
 
 # action setup:
 # 1. start action
