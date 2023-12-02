@@ -211,25 +211,81 @@ def select_unit_by_cost(cost: int):
 
     click_image(f"combat/{cost}_gold_unit")
 
-def establish_game_screen_bounds():
+def click_left_lane():
+    if not SCREEN_LOCATE_PARAMS["region"]:
+        raise ValueError("Cannot click left lane. Game screen bounds not established.")
+    
+    
+    # get left lane cords. should be 1/4 of bound region in x, and 2/3 of bound region in y
+    left_lane_x = SCREEN_LOCATE_PARAMS["region"][0] + (SCREEN_LOCATE_PARAMS["region"][2] / 4)
+    left_lane_y = SCREEN_LOCATE_PARAMS["region"][1] + (SCREEN_LOCATE_PARAMS["region"][3] / 3 * 2)
+
+    pyautogui.click(left_lane_x, left_lane_y, duration=0.25, tween=pyautogui.easeInOutQuad)
+
+def click_middle_lane():
+    if not SCREEN_LOCATE_PARAMS["region"]:
+        raise ValueError("Cannot click middle lane. Game screen bounds not established.")
+    
+    # get middle lane cords. should be 1/2 of bound region in x, and 2/3 of bound region in y
+    middle_lane_x = SCREEN_LOCATE_PARAMS["region"][0] + (SCREEN_LOCATE_PARAMS["region"][2] / 2)
+    middle_lane_y = SCREEN_LOCATE_PARAMS["region"][1] + (SCREEN_LOCATE_PARAMS["region"][3] / 3 * 2)
+
+    pyautogui.click(middle_lane_x, middle_lane_y, duration=0.25, tween=pyautogui.easeInOutQuad)
+
+def click_right_lane():
+    if not SCREEN_LOCATE_PARAMS["region"]:
+        raise ValueError("Cannot click right lane. Game screen bounds not established.")
+    
+    # get right lane cords. should be 3/4 of bound region in x, and 2/3 of bound region in y
+    right_lane_x = SCREEN_LOCATE_PARAMS["region"][0] + (SCREEN_LOCATE_PARAMS["region"][2] / 4 * 3)
+    right_lane_y = SCREEN_LOCATE_PARAMS["region"][1] + (SCREEN_LOCATE_PARAMS["region"][3] / 3 * 2)
+
+    pyautogui.click(right_lane_x, right_lane_y, duration=0.25, tween=pyautogui.easeInOutQuad)
+
+def establish_game_screen_bounds(force_reset=False):
     # note currently relies on garrosh icon being in top left. TODO: make this more robust.
     print("Establishing game screen bounds...")
 
-    top_left_icon_location = get_image_location("top_left_icon", centered=False)
-    bottom_right_icon_location = get_image_location("bottom_right_icon", centered=False)
+    # read from file bounds.txt
 
-    # check we have both locations
-    if not top_left_icon_location or not bottom_right_icon_location:
-        print("Failed to create screen bounds. Could not find top left or bottom right icon.")
-        return False
+    bounds = SCREEN_LOCATE_PARAMS["region"]
+    if bounds:
+        print("Bounds fetched from global state.")
+        return True
 
-    # bottom right location is foudn at topleft, we need to add the width and height of the icon to get the bottom right
-    bottom_right_icon_location = (bottom_right_icon_location[0] + bottom_right_icon_location.width, bottom_right_icon_location[1] + bottom_right_icon_location.height)
+    else:
+        try:
+            with open("bounds.txt", "r") as f:
+                bounds = f.read().split(",")
+                print(bounds)
+                bounds = [int(bound) for bound in bounds]
+                SCREEN_LOCATE_PARAMS["region"] = tuple(bounds)
+                print("Bounds fetched from bounds.txt.")
+                return True
+        except Exception as e:
+            bounds = None
+            print("Failed to read bounds.txt. Creating new bounds.")
 
-    # create a bounding box
-    bounding_box = (top_left_icon_location[0], top_left_icon_location[1], bottom_right_icon_location[0] - top_left_icon_location[0], bottom_right_icon_location[1] - top_left_icon_location[1])
+    if force_reset or not bounds:
+        top_left_icon_location = get_image_location("top_left_icon", centered=False)
+        bottom_right_icon_location = get_image_location("bottom_right_icon", centered=False)
 
-    SCREEN_LOCATE_PARAMS["region"] = bounding_box
+        # check we have both locations
+        if not top_left_icon_location or not bottom_right_icon_location:
+            print("Failed to create screen bounds. Could not find top left or bottom right icon.")
+            return False
+
+        # bottom right location is foudn at topleft, we need to add the width and height of the icon to get the bottom right
+        bottom_right_icon_location = (bottom_right_icon_location[0] + bottom_right_icon_location.width, bottom_right_icon_location[1] + bottom_right_icon_location.height)
+
+        # create a bounding box
+        bounding_box = (top_left_icon_location[0], top_left_icon_location[1], bottom_right_icon_location[0] - top_left_icon_location[0], bottom_right_icon_location[1] - top_left_icon_location[1])
+
+        SCREEN_LOCATE_PARAMS["region"] = bounding_box
+
+        #override bounds.txt with new bounds
+        with open("bounds.txt", "w") as f:
+            f.write(",".join([str(bound) for bound in bounding_box]))
 
     return True
 
