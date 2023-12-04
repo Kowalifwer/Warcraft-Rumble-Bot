@@ -8,6 +8,8 @@ SCREEN_LOCATE_PARAMS = {
     "region": None,
 }
 
+# Final unix
+
 def get_image_location(image_name, centered=True) -> tuple or None:
     location = None
     image_path = f"clickables/{image_name}"
